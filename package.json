@@ -1,0 +1,29 @@
+{
+  "name": "gsbasesocket",
+  "description": "Conector para gsbase implementado en nodejs",
+  "version": "1.0.0",
+  "keywords": [
+    "gsbase",
+    "socket"
+  ],
+  "author": {
+    "name": "Jose Manuel Mateos",
+    "email": "jmmateos@gmail.com",
+    "url": ""
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jmmateos/gsbase-socket-node.git"
+  },
+  "Dependencies": {
+    "iconv-lite": "*"
+  },
+  "engines": {
+    "node": ">= 0.6.13 && < 0.11.0"
+  },
+  "licenses": "BSD" ,
+  "main": "index.js",
+  "readme": "",
+  "readmeFilename": "",
+  "_id": "gsbasesocket@1.0.0"
+}
