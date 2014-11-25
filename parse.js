@@ -68,59 +68,60 @@ Parse.prototype.SizeRes = function (data) {
 
 Parse.prototype.ResRun = function (data,callback) {
 	var self=this
+	var datos = data.substr(0,data.length-1);
 	if (isError(data)) {
 		if (typeof callback === 'function')
 			callback(data.substr(1,data.length-1))
 		else
 			self.emit('error',data.substr(1,data.length-1));
-	}
-	var datos = data.substr(0,data.length-1);
-	try {
-		datosjson = JSON.parse(datos);
-		//console.log("JSON.PARSE |"+datos+"|"+datosjson+"|");
-		if (typeof callback === 'function')
-			callback(null,datosjson);
-		else
-			self.emit('data',datosjson);
-	} catch (e) {
-	  if (e instanceof SyntaxError) {
-			var script = py.createScript();
-			//console.log("JSON ERROR ", e.name , e.message);
-			script
-			  .write('#!/usr/bin/python')
-			  .write('# -*- coding: utf-8 -*-')
-			  .write('import json')
-			  .write('print(json.dumps(' + datos +',False,False))')
-			  .once('data', function(data) {
-			  		//console.log("PYTHON PARSE");
-			  		try {
-			  			var datosjson = JSON.parse(data);
-						if (typeof callback === 'function')
-							callback(null,datosjson);
-						else
-							self.emit('data',datosjson);
-					} catch (e) {
-						//console.log("PYTHON ERROR ", e.name , e.message);
-						if (typeof callback === 'function')
-							callback(e)
-						else
-							self.emit('error',e);
-					}
-			  })
-			  .once('error', function(err) {
-				console.log(err);
-				if (typeof callback === 'function')
-					callback(new Error(err  ))
-				else
-					self.emit('error',err);
-			  })
-			  .exec();	
-	  } else {
-		if (typeof callback === 'function')
-			callback(e)
-		else
-			self.emit('error',e);
-	  }
+	} else {
+		try {
+			datosjson = JSON.parse(datos);
+			//console.log("JSON.PARSE |"+datos+"|"+datosjson+"|");
+			if (typeof callback === 'function')
+				callback(null,datosjson);
+			else
+				self.emit('data',datosjson);
+		} catch (e) {
+		  if (e instanceof SyntaxError) {
+				var script = py.createScript();
+				//console.log("JSON ERROR ", e.name , e.message);
+				script
+				  .write('#!/usr/bin/python')
+				  .write('# -*- coding: utf-8 -*-')
+				  .write('import json')
+				  .write('print(json.dumps(' + datos +',False,False))')
+				  .once('data', function(data) {
+				  		//console.log("PYTHON PARSE");
+				  		try {
+				  			var datosjson = JSON.parse(data);
+							if (typeof callback === 'function')
+								callback(null,datosjson);
+							else
+								self.emit('data',datosjson);
+						} catch (e) {
+							//console.log("PYTHON ERROR ", e.name , e.message);
+							if (typeof callback === 'function')
+								callback(e)
+							else
+								self.emit('error',e);
+						}
+				  })
+				  .once('error', function(err) {
+					console.log(err);
+					if (typeof callback === 'function')
+						callback(new Error(err  ))
+					else
+						self.emit('error',err);
+				  })
+				  .exec();	
+		  } else {
+			if (typeof callback === 'function')
+				callback(e)
+			else
+				self.emit('error',e);
+		  }
+		}
 	}
 	return this;
 };
