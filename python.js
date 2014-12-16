@@ -32,10 +32,15 @@ exports.createScript = function () {
       mod.emit('error', data.toString());
     });
 	
+  py.on('error', function (err){
+      mod.emit('error',err.code + ' python not found.');
+  });
+
 	py.on('exit', function(code) {
 		fs.unlink(self.ficpy);
-		if (code == 0) mod.emit('data', self.bufout);
-	});
+		if (code === 0) { mod.emit('data', self.bufout);
+    } else { mod.emit('error',err.code + ' python not found.'); }
+  });
     
     return this;
   }

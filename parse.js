@@ -110,9 +110,9 @@ Parse.prototype.ResRun = function (data,callback) {
 				  .once('error', function(err) {
 					console.log(err);
 					if (typeof callback === 'function')
-						callback(new Error(err  ))
+						callback(data.substr(1,data.length))
 					else
-						self.emit('error',err);
+						self.emit('error',data.substr(1,data.length));
 				  })
 				  .exec();	
 		  } else {
