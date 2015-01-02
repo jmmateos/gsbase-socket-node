@@ -24,6 +24,16 @@ function isError(data) {
 	else	return false;
 }
 
+function Error(data) {
+	var patt = /(?:[\S\s]+\(')([\S\s]+)(?:\',\s*)(\d*)(?:[\s\S]+)/g	
+	var match = patt.exec(data);
+	var result = {};
+	result.detail = match[0];
+	result.message = match[1];
+	result.code = match[2];
+	return result;
+}
+
 function Parse() {
   var self = this;
   this.i = 0;
@@ -71,9 +81,9 @@ Parse.prototype.ResRun = function (data,callback) {
 	var datos = data.substr(0,data.length-1);
 	if (isError(data)) {
 		if (typeof callback === 'function')
-			callback(data.substr(1,data.length-1))
+			callback(Error(data))
 		else
-			self.emit('error',data.substr(1,data.length-1));
+			self.emit('error',Error(data));
 	} else {
 		try {
 			datosjson = JSON.parse(datos);
