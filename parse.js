@@ -25,7 +25,7 @@ function isError(data) {
 }
 
 function Error(data) {
-	var patt = /(?:[\S\s]+\(')([\S\s]+)(?:\',\s*)(\d*)(?:[\s\S]+)/g	
+	var patt = /(?:[\S\s]+\('|")([\S\s]+)(?:',\s*|",\s*)(\d*)(?:[\s\S]+)/g	
 	var match = patt.exec(data);
 	var result = {};
 	result.detail = match[0];

@@ -46,11 +46,11 @@ function gsbaseSocket() {
   }  
 
   sock.on('error', function(err){
-    if ('ECONNREFUSED' != err.code) {
-      self.emit('error', err);
+	if ('ECONNREFUSED' != err.code) {
+	  self.emit('error', err);
 	} else {
 		self.emit('error', err);
-    }
+	}
   });
 
   sock.on('data', function(chunk){
@@ -79,7 +79,7 @@ function gsbaseSocket() {
 		}
 		var resto = self.TamResp-self.Buffer.length;
 		self.Buffer += data.substr(0,self.TamResp-self.Buffer.length);
- 	    var restostr=data.substr(resto)
+		var restostr=data.substr(resto)
 		//console.log('Buff size:%d RestoSTR:%s ... %s',self.Buffer.length,restostr.substr(0,20),restostr.substr(restostr.length-20,20))
 		if (self.Buffer.length >= self.TamResp) {
 		  self.parser.ResRun(replaceAnsi(self.Buffer),self.taskRunning.callback);
@@ -93,26 +93,30 @@ function gsbaseSocket() {
 
 
   sock.on('end', function() {
-    self.connected = false;
-    if (self.closing) return self.emit('close');
+	self.connected = false;
+	console.log('socket destruido.')
+	if (self.closing) return self.emit('close');
   
   });
   
   sock.on('close', function(had_error){
-    self.connected = false;
-    if (self.closing) return self.emit('close');
+	self.connected = false;
 	if (had_error) return self.emit('error','cerrando');
-    setTimeout(function(){
-      self.emit('reconnect attempt');
-      sock.destroy();
-      self.Connect(self.host,self.port);
-      self.retry = Math.min(self.retryMaxTimeout, self.retry * 1.5);
-    }, self.retry);
+	if (self.closing) {
+		return self.emit('close');	
+	} else {
+		setTimeout(function(){
+			self.emit('reconnect attempt');
+			sock.destroy();
+			self.Connect(self.host,self.port);
+			self.retry = Math.min(self.retryMaxTimeout, self.retry * 1.5);
+		}, self.retry);
+	}
   });
 
   sock.on('connect', function(){
-    self.connected = true;
-    self.retry = self.retryTimeout;
+	self.connected = true;
+	self.retry = self.retryTimeout;
 	self.task = 'connect';
   });
   
@@ -122,12 +126,17 @@ gsbaseSocket.prototype.__proto__ = Emitter.prototype;
 
 
 gsbaseSocket.prototype.Connect = function(host,port){
-  port = typeof port !== 'undefined' ? port:8121;
-  this.type = 'client';
-  this.port = port;
-  this.host = host;
-  this.sock.connect(port, host);
-  return this;
+	port = typeof port !== 'undefined' ? port:8121;
+	if (this.connected) {
+		console.log('server actually connected.'); 
+		this.emit('logon');
+	} else {
+		this.type = 'client';
+		this.port = port;
+		this.host = host;
+		this.sock.connect(port, host);
+	}
+	return this;
 };
 
 gsbaseSocket.prototype.Logon = function (EmGes,Usu,Pwd,Apli,Emp,PwApli,PwEmp,Ventana) {
@@ -164,8 +173,11 @@ gsbaseSocket.prototype.Run = function (Accion, Param, Ventana,callback) {
 
 gsbaseSocket.prototype.close = function(){
 	if (this.taskRun.length === 0) {
+		console.log('Cerrando...');
 		this.closing = true;
 		this.sock.destroy();
+	} else {
+		console.log('Cierre anulado, tareas pendientes...');
 	}
   return this;
 };
