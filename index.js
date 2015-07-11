@@ -21,29 +21,88 @@ function replaceAnsi(text) {
   }).replace(/\\n/g, '');
 }
 
+function checkConnectionOptions (CxOptions) {
+	if (!CxOptions.host) throw new Error("Connection Options: host is required");
+	if (!CxOptions.port) CxOptions.port =8121;
+	return CxOptions;
+}
 
-function gsbaseSocket() {
+function checkLogonOptions (LgOptions) {
+	if (!LgOptions.EmGes) throw new Error("Logon Options: Gestora is required");
+	if (!LgOptions.Usu) throw new Error("Logon Options: User is required");
+	if (!LgOptions.Pwd) throw new Error("Logon Options: Pasword is required");
+	if (!LgOptions.Apli) throw new Error("Logon Options: Aplicacion is required");
+	if (!LgOptions.Emp) throw new Error("Logon Options: Empresa is required");
+	if (!LgOptions.PwApli) LgOptions.PwApli ='';
+	if (!LgOptions.PwEmp) LgOptions.PwEmp ='';
+	if (!LgOptions.Ventana) LgOptions.Ventana ='';
+	return LgOptions;
+}
+
+function gsbaseSocket(ConnectionOptions, LogonOptions) {
   var self = this;
   var sock = this.sock = new net.Socket;
   sock.setEncoding('utf8');
   this.retryTimeout = this.retry = 100;
   this.retryMaxTimeout = 2000;
+  this.CxOptions = checkConnectionOptions(ConnectionOptions);
+  this.LgOptions = checkLogonOptions(LogonOptions);
   this.parser = new Parser;
   this.parser.on('data',function (data) {self.emit('data',data)})
 			.on('error', function(err) {self.emit('error',err)});
   this.Buffer = '';
   this.TamResp = 0;
   this.PdteEnvio=false;
+  this.connected = false;
+  this.connecting = false;
   this.taskRun= [];
   this.taskRunning = {};
   
   this.Ejecutar = function() {
-	if (self.taskRun.length == 0) return false;
-	self.PdteEnvio=true;
-	var task=self.taskRun.pop()
-	self.taskRunning = task
-	var res= self.sock.write(task.task);
-  }  
+	if (self.taskRun.length == 0) {
+		self.close();
+	} else {
+		self.task = 'run';
+		self.PdteEnvio=true;
+		var task=self.taskRun.pop()
+		self.taskRunning = task
+		var res= self.sock.write(task.task);
+	}
+  } ;
+
+  this.close = function () {
+	console.log('Cerrando...');
+	self.closing = true;
+	self.sock.destroy();
+  };
+
+	this.Connect = function (){
+		if (self.connected) {
+			console.log('server actually connected.'); 
+		} else if (self.connecting) {
+			console.log('server is connecting.');
+		} else {
+			console.log('conectar'); 
+			self.connecting = true;
+			self.type = 'client';
+			self.sock.connect(this.CxOptions.port, this.CxOptions.host);
+		}
+	};
+
+	this.Logon = function () {
+		self.task = 'logon';
+		self.sock.write(iconv.toEncoding(
+			this.parser.Logon(
+				this.LgOptions.EmGes,
+				this.LgOptions.Usu,
+				this.LgOptions.Pwd,
+				this.LgOptions.Apli,
+				this.LgOptions.Emp,
+				this.LgOptions.PwApli,
+				this.LgOptions.PwEmp),
+			'iso-8859-1'));
+	};
+
 
   sock.on('error', function(err){
 	if ('ECONNREFUSED' != err.code) {
@@ -56,15 +115,21 @@ function gsbaseSocket() {
   sock.on('data', function(chunk){
 	var str = chunk;
 	if (self.task == 'connect') {
-		self.emit('connect',str);
+		self.emit('connect',str.substr(0,str.length-2));
+		self.Logon();
 	} else if (self.task == 'logon') {
+		self.connecting = false;
 		self.parser.ResLogon(str, 
 			function (err) {
 				if (err)  {
 					self.close();
 					self.emit('error',err);
 					
-				} else self.emit('logon');});
+				} else {
+					self.emit('logon');
+					self.Ejecutar();
+				}
+			});
 	} else if (self.task == 'run') {
 		TruncaRespuesta(str);
 	}
@@ -101,14 +166,14 @@ function gsbaseSocket() {
   
   sock.on('close', function(had_error){
 	self.connected = false;
-	if (had_error) return self.emit('error','cerrando');
+	if (had_error) return self.emit('error','cerrando por error en la conexión.');
 	if (self.closing) {
 		return self.emit('close');	
 	} else {
 		setTimeout(function(){
 			self.emit('reconnect attempt');
 			sock.destroy();
-			self.Connect(self.host,self.port);
+			self.Connect();
 			self.retry = Math.min(self.retryMaxTimeout, self.retry * 1.5);
 		}, self.retry);
 	}
@@ -120,66 +185,26 @@ function gsbaseSocket() {
 	self.task = 'connect';
   });
   
+
 }
 
 gsbaseSocket.prototype.__proto__ = Emitter.prototype;
 
 
-gsbaseSocket.prototype.Connect = function(host,port){
-	port = typeof port !== 'undefined' ? port:8121;
-	if (this.connected) {
-		console.log('server actually connected.'); 
-		this.emit('logon');
-	} else {
-		this.type = 'client';
-		this.port = port;
-		this.host = host;
-		this.sock.connect(port, host);
-	}
-	return this;
-};
-
-gsbaseSocket.prototype.Logon = function (EmGes,Usu,Pwd,Apli,Emp,PwApli,PwEmp,Ventana) {
-	this.EmGes = EmGes;
-	this.Usu = Usu;
-	this.Pwd = Pwd;
-	this.Apli = Apli;
-	this.Emp = Emp;
-	this.PwApli = typeof PwApli !== 'undefined' ? PwApli:''; 
-	this.PwEmp =  typeof PwEmp !== 'undefined' ? PwEmp:''; 
-	this.Ventana = typeof Ventana !== 'undefined' ? Ventana:''; 
-	this.task = 'logon';
-	this.sock.write(iconv.toEncoding(this.parser.Logon(this.EmGes,this.Usu,this.Pwd,this.Apli,this.Emp,this.PwApli,this.PwEmp),'iso-8859-1'));
-	return this;
-};
 
 gsbaseSocket.prototype.Run = function (Accion, Param, Ventana,callback) {
 	callback = typeof Ventana === 'function' ? Ventana:callback;
-	Ventana = typeof Ventana !== 'undefined' && typeof Ventana !== 'function' ? Ventana:this.Ventana; 
+	Ventana = typeof Ventana !== 'undefined' && typeof Ventana !== 'function' ? Ventana:this.LgOptions.Ventana; 
 	
 	if (!Ventana) throw new Error('Ventana de ejecución necesaria.');
 	var newTask = {}
 	newTask.task=iconv.toEncoding(this.parser.Run(Accion, Ventana, Param),'iso-8859-1')
 	newTask.callback=callback
-	this.task = 'run';
 	this.taskRun.unshift(newTask);
-	if (!this.PdteEnvio) {
-		this.Ejecutar ();
-	}
+	this.Connect();
+
 	return this;
 };
 
-
-
-gsbaseSocket.prototype.close = function(){
-	if (this.taskRun.length === 0) {
-		console.log('Cerrando...');
-		this.closing = true;
-		this.sock.destroy();
-	} else {
-		console.log('Cierre anulado, tareas pendientes...');
-	}
-  return this;
-};
 
 
