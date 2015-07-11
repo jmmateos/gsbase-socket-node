@@ -1,7 +1,7 @@
 {
   "name": "gsbasesocket",
   "description": "Conector para gsbase implementado en nodejs",
-  "version": "1.0.3",
+  "version": "1.1.0",
   "keywords": [
     "gsbase",
     "socket"
@@ -19,11 +19,11 @@
     "iconv-lite": "~0.4.0"
   },
   "engines": {
-    "node": "~0.11.0"
+    "node": ">=0.11.0"
   },
   "licenses": "BSD",
   "main": "index.js",
   "readme": "",
   "readmeFilename": "",
-  "_id": "gsbasesocket@1.0.3"
+  "_id": "gsbasesocket@1.1.0"
 }
