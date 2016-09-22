@@ -20,17 +20,24 @@ function decimalToHex(d) {
 
 function isError(data) {
 	if (data.substr(1,6) == 'Error:' && data.indexOf('line:') != -1) 
-		return true
-	else	return false;
+		return true;
+	else if (data.charCodeAt(0) === 2) return true;
+	else return false;
 }
 
 function Error(data) {
 	var patt = /(?:[\S\s]+\('|")([\S\s]+)(?:',\s*|",\s*)(\d*)(?:[\s\S]+)/g	
 	var match = patt.exec(data);
 	var result = {};
-	result.detail = match[0];
-	result.message = match[1];
-	result.code = match[2];
+	if (match) {
+		result.detail = match[0];
+		result.message = match[1];
+		result.code = match[2];		
+	} else {
+		result.detail = data;
+		result.message = 'Error no controlado.';
+		result.code = '0';		
+	}
 	return result;
 }
 

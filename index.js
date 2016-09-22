@@ -55,32 +55,41 @@ function gsbaseSocket(ConnectionOptions, LogonOptions) {
   this.PdteEnvio=false;
   this.connected = false;
   this.connecting = false;
+  this.closing = false;
   this.taskRun= [];
   this.taskRunning = {};
   
   this.Ejecutar = function() {
-	if (self.taskRun.length == 0) {
+	if (self.taskRun.length === 0 && !self.PdteEnvio) {
 		self.close();
 	} else {
-		self.task = 'run';
-		self.PdteEnvio=true;
-		var task=self.taskRun.pop()
-		self.taskRunning = task
-		var res= self.sock.write(task.task);
+		if (self.closing) {
+			setTimeout(self.Connect, 200);
+		} else {
+			self.task = 'run';
+			self.PdteEnvio=true;
+			var task=self.taskRun.pop()
+			self.taskRunning = task
+			var res= self.sock.write(task.task);			
+		}
 	}
-  } ;
+  };
 
   this.close = function () {
-	console.log('Cerrando...');
-	self.closing = true;
-	self.sock.destroy();
+	if (self.taskRun.length === 0 && !self.PdteEnvio) {
+		console.log('Cerrando...');
+		self.closing = true;
+		self.sock.destroy();
+	}
   };
 
 	this.Connect = function (){
 		if (self.connected) {
-			console.log('server actually connected.'); 
+			console.log('server actually connected.');
 		} else if (self.connecting) {
 			console.log('server is connecting.');
+		} else if (self.closing) {
+			console.log('server is disconnecting.');
 		} else {
 			console.log('conectar'); 
 			self.connecting = true;
@@ -160,15 +169,18 @@ function gsbaseSocket(ConnectionOptions, LogonOptions) {
   sock.on('end', function() {
 	self.connected = false;
 	console.log('socket destruido.')
-	if (self.closing) return self.emit('close');
-  
+	if (self.closing) { 
+		self.closing = false;
+		self.emit('close');
+	}  
   });
   
   sock.on('close', function(had_error){
 	self.connected = false;
-	if (had_error) return self.emit('error','cerrando por error en la conexión.');
+	if (had_error) self.emit('error','cerrando por error en la conexión.');
 	if (self.closing) {
-		return self.emit('close');	
+		self.closing = false;
+		self.emit('close');	
 	} else {
 		setTimeout(function(){
 			self.emit('reconnect attempt');
