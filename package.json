@@ -1,7 +1,7 @@
 {
   "name": "gsbasesocket",
   "description": "Conector para gsbase implementado en nodejs",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "keywords": [
     "gsbase",
     "socket"
